@@ -4,7 +4,7 @@ All utility functions are inlined — no separate utils.py required.
 
 Merge summary
 ─────────────
-YOUR project:
+MY project:
   ✔ Email + strong-password signup with validation
   ✔ Welcome screen (dismissible, once per session)
   ✔ Sample Data mode — 4 global locations, Plotly charts
@@ -1045,4 +1045,5 @@ No renaming needed — bands are auto-detected from the filename.
     col_a,col_b = st.columns(2)
     col_a.markdown("🔗 [Copernicus Data Space](https://browser.dataspace.copernicus.eu)")
     col_b.markdown("🔗 [USGS EarthExplorer](https://earthexplorer.usgs.gov)")
+
     st.info("⚠️ All bands must come from the **same acquisition date and same tile**.")
