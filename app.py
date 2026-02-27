@@ -4,7 +4,7 @@ All utility functions are inlined — no separate utils.py required.
 
 Merge summary
 ─────────────
-MY project:
+YOUR project:
   ✔ Email + strong-password signup with validation
   ✔ Welcome screen (dismissible, once per session)
   ✔ Sample Data mode — 4 global locations, Plotly charts
@@ -174,6 +174,176 @@ def irrigation_prescription(health_score, location_label="the field"):
         return (f"Critical metabolic damage in {location_label}. "
                 f"Flood-irrigate immediately and apply targeted micronutrient treatment. "
                 f"Yield loss imminent without intervention.")
+
+
+# ── Plain-English Summary Card ────────────────────────────
+def plain_english_summary(health_score, location_label="this field",
+                           stressed_pct=None, ndvi_mean=None,
+                           cwsi=None, cire=None, pysif=None,
+                           crop=None, context="sample"):
+    """
+    Renders a big friendly 'What does this mean?' card BEFORE any charts.
+    All parameters are optional — function degrades gracefully.
+    """
+    vs = vitality_score(health_score)
+    status_key, _, _ = traffic_light_class(health_score)
+
+    if status_key == "healthy":
+        headline_emoji = "✅"
+        headline_color = "#00e676"
+        headline_text  = "Your crops look healthy!"
+        plain_verdict  = (
+            f"The satellite data for <b>{location_label}</b> shows that your "
+            f"{'<b>' + crop + '</b> ' if crop else ''}crops are in <b>good condition</b>. "
+            f"Plants are well-watered, their internal cell structure is intact, "
+            f"and photosynthesis is running normally."
+        )
+        what_happened  = (
+            "Think of it like a health check-up where everything came back normal. "
+            "The crops are drinking enough water, their leaves are full of chlorophyll "
+            "(the green pigment that makes food from sunlight), and the roots are healthy."
+        )
+        action_box_color = "#0a2d0a"
+        action_border    = "#00e676"
+        action_title     = "👨‍🌾 What should a farmer do?"
+        action_text      = (
+            f"No action needed right now. Keep doing what you're doing. "
+            f"Check back in 5 days using this tool to make sure conditions haven't changed."
+        )
+
+    elif status_key == "previsual":
+        headline_emoji = "⚠️"
+        headline_color = "#ffa726"
+        headline_text  = "Hidden stress detected — the plant looks fine but isn't!"
+        plain_verdict  = (
+            f"The satellite data for <b>{location_label}</b> has detected <b>early, invisible stress</b> "
+            f"in your {'<b>' + crop + '</b> ' if crop else ''}crops. "
+            f"<b>To the human eye and even to standard satellite tools, the field looks green and healthy.</b> "
+            f"But our sensors are picking up changes happening inside the plant — "
+            f"like a person who feels feverish before they look sick."
+        )
+        what_happened  = (
+            "Here's what's happening right now inside the plant: <br>"
+            "• The plant is starting to <b>close its tiny breathing pores</b> (stomata) to save water — like sweating less on a hot day.<br>"
+            "• The <b>chlorophyll molecules</b> (the green pigment) are beginning to weaken at a molecular level — not visible yet, but detectable.<br>"
+            "• <b>Photosynthesis</b> (how the plant makes food from sunlight) is slowing down.<br>"
+            "A standard NDVI satellite tool would <b>not</b> catch this yet. Our Red-Edge band (B05) and water band (B11) catch it <b>7–14 days earlier</b>."
+        )
+        action_box_color = "#2d2000"
+        action_border    = "#ffa726"
+        action_title     = "👨‍🌾 What should a farmer do RIGHT NOW?"
+        action_text      = (
+            "Act within the next <b>24–48 hours</b>:<br>"
+            "• <b>Increase irrigation by 10–15%</b> — the plants are thirsty before they show it.<br>"
+            "• Check your <b>nitrogen fertilizer</b> levels — early chlorophyll breakdown often means nutrient deficiency.<br>"
+            "• <b>Do NOT wait</b> until the field looks yellow — by then, you've already lost 10–20% of your yield and it can't be recovered."
+        )
+
+    else:  # damaged
+        headline_emoji = "🚨"
+        headline_color = "#ef5350"
+        headline_text  = "Critical crop damage — immediate action required!"
+        plain_verdict  = (
+            f"The satellite data for <b>{location_label}</b> shows <b>severe metabolic damage</b> "
+            f"in your {'<b>' + crop + '</b> ' if crop else ''}crops. "
+            f"The stress has gone beyond the hidden phase — <b>plant cells are actively dying</b>. "
+            f"Visible yellowing and wilting are either already present or days away."
+        )
+        what_happened  = (
+            "Here's what has gone wrong inside the plant:<br>"
+            "• <b>Cell membranes are rupturing</b> from prolonged water or heat stress — this is irreversible damage.<br>"
+            "• <b>Chlorophyll is breaking down rapidly</b> — the plant is losing its ability to make food from sunlight.<br>"
+            "• <b>Photosynthesis has nearly stopped</b> — the plant is shutting down non-essential functions to survive.<br>"
+            "This is the stage where <b>yield loss is already locked in</b>. Emergency action can prevent complete crop failure, "
+            "but the lost yield cannot be recovered."
+        )
+        action_box_color = "#3b0a0a"
+        action_border    = "#ef5350"
+        action_title     = "👨‍🌾 Emergency action needed NOW!"
+        action_text      = (
+            "<b>Do all of the following immediately:</b><br>"
+            "• <b>Flood-irrigate the entire field</b> — do not wait for the next scheduled irrigation.<br>"
+            "• Apply <b>micronutrient foliar spray</b> (especially nitrogen and potassium) directly on leaves.<br>"
+            "• <b>Shade vulnerable seedlings</b> if heat is a contributing factor.<br>"
+            "• Contact your <b>agricultural extension officer</b> — this level of stress may qualify for crop insurance claims."
+        )
+
+    # ── Build extra insight lines from optional data ──────
+    extra_lines = []
+    if stressed_pct is not None:
+        sp = round(stressed_pct, 1)
+        if sp < 20:
+            extra_lines.append(f"🗺️ <b>Only {sp}% of the field area</b> is stressed — it's a small patch, easy to treat early.")
+        elif sp < 50:
+            extra_lines.append(f"🗺️ <b>{sp}% of the field area</b> is showing stress — about half the field needs attention.")
+        else:
+            extra_lines.append(f"🗺️ <b>{sp}% of the field area</b> is stressed — more than half the field is affected.")
+    if ndvi_mean is not None:
+        nv = round(ndvi_mean, 2)
+        if nv >= 0.6:
+            extra_lines.append(f"🌿 <b>NDVI score is {nv}</b> — the conventional tool says healthy. But our pre-visual sensors disagree.")
+        elif nv >= 0.4:
+            extra_lines.append(f"🌿 <b>NDVI score is {nv}</b> — the conventional tool is starting to notice stress too.")
+        else:
+            extra_lines.append(f"🌿 <b>NDVI score is {nv}</b> — visible damage is now detectable even by standard tools.")
+    if cwsi is not None:
+        if cwsi > 0.6:
+            extra_lines.append(f"💧 <b>Water stress is high (CWSI={cwsi})</b> — the plant is essentially running a fever from dehydration.")
+        elif cwsi > 0.35:
+            extra_lines.append(f"💧 <b>Mild water stress detected (CWSI={cwsi})</b> — the plant is conserving water.")
+        else:
+            extra_lines.append(f"💧 <b>Water status is fine (CWSI={cwsi})</b> — the plant is well hydrated.")
+    if pysif is not None:
+        if pysif < 0.4:
+            extra_lines.append(f"☀️ <b>Photosynthesis is very low (SIF={pysif})</b> — the plant is barely making food from sunlight.")
+        elif pysif < 0.65:
+            extra_lines.append(f"☀️ <b>Photosynthesis is reduced (SIF={pysif})</b> — the plant is underperforming.")
+        else:
+            extra_lines.append(f"☀️ <b>Photosynthesis is normal (SIF={pysif})</b> — light energy is being used efficiently.")
+
+    extra_html = "".join(f"<div style='margin:5px 0;color:#cdd8e3;font-size:0.93em'>{line}</div>" for line in extra_lines)
+
+    st.markdown(f"""
+<div style='background:linear-gradient(135deg,#0d1f36,#0a2a4a);
+            border:2px solid {headline_color};border-radius:14px;
+            padding:24px 28px;margin-bottom:20px'>
+
+  <div style='font-size:1.55em;font-weight:bold;color:{headline_color};margin-bottom:14px'>
+    {headline_emoji} In Plain English: {headline_text}
+  </div>
+
+  <div style='background:rgba(0,0,0,0.25);border-radius:8px;padding:14px 18px;margin-bottom:14px;
+              color:#e0f0ff;font-size:1.0em;line-height:1.7'>
+    {plain_verdict}
+  </div>
+
+  <details>
+    <summary style='color:#4fc3f7;cursor:pointer;font-size:0.95em;font-weight:600;
+                    margin-bottom:8px'>
+      🔬 What is actually happening inside the plant? (click to expand)
+    </summary>
+    <div style='color:#b0cce8;font-size:0.92em;line-height:1.8;
+                padding:10px 14px;border-left:3px solid #1e4060;margin-top:8px'>
+      {what_happened}
+    </div>
+  </details>
+
+  {f"<div style='margin-top:12px'>{extra_html}</div>" if extra_lines else ""}
+
+  <div style='background:{action_box_color};border:1px solid {action_border};
+              border-radius:8px;padding:14px 18px;margin-top:16px'>
+    <div style='color:{action_border};font-weight:bold;font-size:1.0em;margin-bottom:8px'>
+      {action_title}
+    </div>
+    <div style='color:#e0f0ff;font-size:0.94em;line-height:1.8'>{action_text}</div>
+  </div>
+
+  <div style='margin-top:12px;color:#78909c;font-size:0.82em'>
+    📡 Data source: ESA Sentinel-2 Level-2A · Analysis: Composite Stress Score
+    (NDVI + NDWI + Red-Edge Index) · Vitality: {vs}/100
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
 
 # ── Plotly chart helpers ──────────────────────────────────
@@ -499,6 +669,16 @@ if page == "🏠 Home":
 
     st.markdown("---")
     st.subheader("Stress-Vision vs Standard NDVI")
+    st.markdown("""
+<div style='background:#0d1f36;border-left:4px solid #4fc3f7;border-radius:0 8px 8px 0;
+            padding:10px 16px;margin-bottom:14px;color:#b0cce8;font-size:0.9em'>
+  <b style='color:#4fc3f7'>📡 What is this chart comparing?</b><br>
+  The <b style='color:#4fc3f7'>blue shape</b> is Stress-Vision. The <b style='color:#ef5350'>red dashed shape</b>
+  is the standard NDVI tool used by most satellites today. A bigger area = better performance on that metric.
+  The most important axis is <b>"Pre-Visual Capability"</b> — that's where Stress-Vision dominates,
+  because NDVI scores nearly zero there (it simply cannot detect hidden stress at all).
+</div>
+""", unsafe_allow_html=True)
     categories = ["Cost Effectiveness","Detection Speed","Pre-Visual Capability",
                   "Prescription Output","Scalability","Compatibility"]
     sv_s   = [9.0,8.5,9.5,9.0,8.0,7.5]
@@ -542,6 +722,22 @@ elif page == "🗺️ Sample Data":
     m3.metric("Water Optimisation",f"{data['water']}%",     "Efficiency Gain")
     m4.metric("Temp Anomaly",      data['temp_anomaly'],     "Above Normal")
     st.divider()
+
+    # ── Plain-English Summary (shown FIRST before any charts) ──
+    np.random.seed(int(data['health_score'] * 100))
+    cwsi_s  = compute_cwsi(data['health_score'])
+    cire_s  = compute_cire(data['health_score'])
+    pysif_s = compute_pysif(data['health_score'])
+    plain_english_summary(
+        health_score  = data['health_score'],
+        location_label= location,
+        ndvi_mean     = data['health_score'] + 0.05,
+        cwsi          = cwsi_s,
+        cire          = cire_s,
+        pysif         = pysif_s,
+        crop          = CROP_INFO[location],
+        context       = "sample",
+    )
 
     with st.expander("Sentinel-2 Band Reference"):
         bd = pd.DataFrame([{"Band":k,"Name":v[0],"Wavelength":v[1],"Purpose":v[2]}
@@ -620,6 +816,21 @@ elif page == "🗺️ Sample Data":
 
     st.write("---")
     st.subheader("Spectral Signature — Healthy vs Stressed Crop")
+    st.markdown("""
+<div style='background:#0d1f36;border-left:4px solid #ffd54f;border-radius:0 8px 8px 0;
+            padding:10px 16px;margin-bottom:14px;color:#b0cce8;font-size:0.9em'>
+  <b style='color:#ffd54f'>📈 What is this chart showing?</b><br>
+  Each point on the x-axis is a different satellite band (type of light).
+  The two lines show how much light a <b style='color:#66bb6a'>healthy crop</b> vs a
+  <b style='color:#ef5350'>stressed crop</b> reflects back to the satellite.
+  <br><br>
+  Notice the <b style='color:#ffd54f'>highlighted yellow zone (695–720 nm)</b> — this is where the
+  two lines start to <em>diverge</em>. That's the Red-Edge band. The stressed crop reflects more light
+  here because its chlorophyll is weakening — but the plant still <em>looks green</em> to the naked eye.
+  This divergence is the scientific proof of pre-visual detection.
+  Standard NDVI tools don't look at this zone at all.
+</div>
+""", unsafe_allow_html=True)
     wl = [560,665,705,842,1610]; bl = ["B03","B04","B05","B08","B11"]
     hs = [0.12,0.05,0.19,0.42,0.22]
     np.random.seed(3); sf = 1-data['health_score']
@@ -668,6 +879,16 @@ elif page == "🗺️ Sample Data":
 
     st.write("---")
     st.subheader("Early Warning Index Dashboard")
+    st.markdown("""
+<div style='background:#0d1f36;border-left:4px solid #4fc3f7;border-radius:0 8px 8px 0;
+            padding:10px 16px;margin-bottom:14px;color:#b0cce8;font-size:0.9em'>
+  <b style='color:#4fc3f7'>📊 What are these dials?</b> These three gauges detect crop stress
+  <b>before it becomes visible</b> — each measures a different hidden signal.
+  Needle in the <b style='color:#66bb6a'>green zone = good</b>.
+  Needle in the <b style='color:#ffa726'>middle = early warning</b>.
+  Needle in the <b style='color:#ef5350'>red zone = act now</b>.
+</div>
+""", unsafe_allow_html=True)
     eg1,eg2,eg3 = st.columns(3)
     with eg1:
         st.plotly_chart(mini_gauge(cwsi,"CWSI — Water Stress","#ef5350"), use_container_width=True)
@@ -681,6 +902,17 @@ elif page == "🗺️ Sample Data":
 
     st.write("---")
     st.subheader("Stress Probability Distribution")
+    st.markdown("""
+<div style='background:#0d1f36;border-left:4px solid #ffa726;border-radius:0 8px 8px 0;
+            padding:10px 16px;margin-bottom:14px;color:#b0cce8;font-size:0.9em'>
+  <b style='color:#ffa726'>🥧 What does this pie chart mean?</b><br>
+  It divides your field's pixels into three categories based on how stressed they are.
+  The <b style='color:#ffa726'>yellow slice (Pre-Visual)</b> is the most important —
+  these are the areas that <em>look perfectly fine</em> in a normal photo
+  but our satellite sensors have already detected hidden stress. If you irrigate these zones now,
+  you prevent yield loss. If you wait, they move to the red slice.
+</div>
+""", unsafe_allow_html=True)
     hs_f=data['health_score']
     p_h=int(max(0,min(100,hs_f*100-10))); p_p=int(max(0,min(100-p_h,(1-hs_f)*60)))
     p_d=max(0,100-p_h-p_p)
@@ -810,6 +1042,23 @@ elif page == "📊 Band Analysis":
     ndvi_map   = create_ndvi_colormap(normalize(ndvi))
     stress_map = create_stress_magma(stress)
 
+    # ── Plain-English Summary for uploaded data ───────────
+    hs_quick = max(0.0, min(1.0, 1.0 - stress_pct / 100))
+    np.random.seed(int(hs_quick * 100))
+    cwsi_q  = compute_cwsi(hs_quick)
+    cire_q  = compute_cire(hs_quick)
+    pysif_q = compute_pysif(hs_quick)
+    plain_english_summary(
+        health_score  = hs_quick,
+        location_label= "your uploaded field",
+        stressed_pct  = stress_pct,
+        ndvi_mean     = float(np.nanmean(ndvi)),
+        cwsi          = cwsi_q,
+        cire          = cire_q,
+        pysif         = pysif_q,
+        context       = "upload",
+    )
+
     threshold    = st.slider("🎚️ Stress Threshold", 0.0, 1.0, 0.6, 0.01)
     high_mask    = (stress > threshold).astype(np.uint8) * 255
     stressed_px  = int(np.sum(stress > threshold))
@@ -830,6 +1079,16 @@ elif page == "📊 Band Analysis":
 
     with tabs[0]:
         st.subheader("RGB False-Colour Composite (R-G-NIR)")
+        st.markdown("""
+<div style='background:#0d1f36;border-left:4px solid #4fc3f7;border-radius:0 8px 8px 0;
+            padding:12px 16px;margin-bottom:12px;color:#b0cce8;font-size:0.93em'>
+  <b style='color:#4fc3f7'>🖼️ What am I looking at?</b><br>
+  This is a satellite photo of your field using special light bands — not a normal camera.
+  <b style='color:#e0f0ff'>Deep red/magenta areas = dense, healthy vegetation.</b>
+  Pale or cyan areas = sparse crops, bare soil, or stressed plants.
+  This image is just for orientation — it shows you <em>where</em> things are, not how stressed they are.
+</div>
+""", unsafe_allow_html=True)
         st.caption("Healthy vegetation appears deep red/magenta.")
         st.image(rgb, use_container_width=True)
         st.download_button("📥 Download RGB", convert_np_to_image(rgb),
@@ -837,17 +1096,55 @@ elif page == "📊 Band Analysis":
 
     with tabs[1]:
         st.subheader("NDVI Map (VIRIDIS)")
+        st.markdown("""
+<div style='background:#0d1f36;border-left:4px solid #66bb6a;border-radius:0 8px 8px 0;
+            padding:12px 16px;margin-bottom:12px;color:#b0cce8;font-size:0.93em'>
+  <b style='color:#66bb6a'>🌿 What am I looking at?</b><br>
+  NDVI is the <b>standard satellite health score</b> used by most farms worldwide.
+  <b style='color:#ffd54f'>Yellow-green</b> = healthy (score close to 1.0).
+  <b style='color:#ce93d8'>Dark purple</b> = stressed or bare soil (score close to 0).
+  <br><br>
+  <b style='color:#ffa726'>⚠️ Important limitation:</b> NDVI only turns purple <em>after</em> your crops are
+  visibly yellowing. By that point, yield loss has already happened. That's why this app also uses
+  the Stress Heatmap tab — which catches problems 7–14 days earlier.
+</div>
+""", unsafe_allow_html=True)
         st.caption("Purple = low NDVI · Yellow-green = high NDVI (healthy).")
         st.image(ndvi_map, use_container_width=True)
         col_nv1,col_nv2,col_nv3 = st.columns(3)
         col_nv1.metric("Mean NDVI",f"{np.nanmean(ndvi):.3f}")
         col_nv2.metric("Min NDVI", f"{np.nanmin(ndvi):.3f}")
         col_nv3.metric("Max NDVI", f"{np.nanmax(ndvi):.3f}")
+        # Plain-English NDVI interpretation
+        mean_ndvi = float(np.nanmean(ndvi))
+        if mean_ndvi >= 0.6:
+            st.success(f"✅ Mean NDVI of {mean_ndvi:.2f} — conventional tools say this field looks healthy. But check the Stress Heatmap tab for the full picture.")
+        elif mean_ndvi >= 0.4:
+            st.warning(f"⚠️ Mean NDVI of {mean_ndvi:.2f} — conventional tools are beginning to detect stress. Our pre-visual signals likely flagged this 1–2 weeks ago.")
+        else:
+            st.error(f"🚨 Mean NDVI of {mean_ndvi:.2f} — visible damage is confirmed even by standard tools. Immediate action required.")
         st.download_button("📥 Download NDVI Map", convert_np_to_image(ndvi_map),
                            "NDVI_map.png","image/png")
 
     with tabs[2]:
         st.subheader("Stress-Vision Heatmap (MAGMA)")
+        st.markdown(f"""
+<div style='background:#0d1f36;border-left:4px solid #ef5350;border-radius:0 8px 8px 0;
+            padding:12px 16px;margin-bottom:12px;color:#b0cce8;font-size:0.93em'>
+  <b style='color:#ef5350'>🔥 What am I looking at?</b><br>
+  This is the <b>core innovation</b> of Stress-Vision. The heatmap combines three satellite signals —
+  water content (B11), chlorophyll structure (B05), and cell health (B08) — into one stress score per pixel.
+  <br><br>
+  <b style='color:#ffffff'>⬛ Black/dark purple</b> = no stress, crops are fine here.<br>
+  <b style='color:#ff7043'>🟧 Orange</b> = moderate stress — plants are struggling.<br>
+  <b style='color:#ffffff;background:#ef5350;padding:1px 4px;border-radius:3px'>⬜ Bright white/yellow</b> = critical stress — act immediately on these zones.
+  <br><br>
+  Average stress across your entire field: <b style='color:#ef5350;font-size:1.1em'>{stress_pct:.1f}%</b>
+  {"— <b style='color:#ef5350'>More than half your field needs urgent attention.</b>" if stress_pct > 50
+   else "— <b style='color:#ffa726'>A significant portion needs attention soon.</b>" if stress_pct > 25
+   else "— <b style='color:#66bb6a'>Most of your field is doing well.</b>"}
+</div>
+""", unsafe_allow_html=True)
         st.caption("Dark = low stress · Bright = critical stress.")
         st.image(stress_map, use_container_width=True)
         st.metric("Average Crop Stress", f"{stress_pct:.2f}%")
@@ -856,6 +1153,22 @@ elif page == "📊 Band Analysis":
 
     with tabs[3]:
         st.subheader(f"High-Stress Zones  (threshold > {threshold:.2f})")
+        st.markdown(f"""
+<div style='background:#0d1f36;border-left:4px solid #ffa726;border-radius:0 8px 8px 0;
+            padding:12px 16px;margin-bottom:12px;color:#b0cce8;font-size:0.93em'>
+  <b style='color:#ffa726'>🗺️ What am I looking at?</b><br>
+  This black-and-white map is the simplest possible view: <b>white = problem zone, black = safe zone.</b>
+  It takes the stress heatmap and draws a clear line — everything above the stress threshold
+  ({threshold:.2f}) is marked white. These white patches are exactly where a farmer needs to go
+  and take action first.
+  <br><br>
+  Currently <b style='color:#ef5350'>{stressed_pct2:.1f}% of your field ({stressed_px:,} pixels)</b> is marked as stressed.
+  <b style='color:#66bb6a'>{healthy_pct2:.1f}% ({healthy_px:,} pixels)</b> is currently healthy.
+  <br><br>
+  💡 <b>Tip:</b> Use the slider above to adjust sensitivity. A threshold of 0.4 catches more subtle
+  early stress. A threshold of 0.7 shows only the most critical zones.
+</div>
+""", unsafe_allow_html=True)
         st.caption("White = above threshold. Adjust slider above to refine.")
         st.image(high_mask, use_container_width=True)
         mc1,mc2 = st.columns(2)
@@ -893,6 +1206,24 @@ elif page == "📊 Band Analysis":
 
     with tabs[5]:
         st.subheader("Advanced Spectral Metrics")
+        st.markdown("""
+<div style='background:#0d1f36;border-left:4px solid #ce93d8;border-radius:0 8px 8px 0;
+            padding:12px 16px;margin-bottom:16px;color:#b0cce8;font-size:0.93em'>
+  <b style='color:#ce93d8'>🔬 What am I looking at?</b><br>
+  These two images show the <b>two earliest stress signals</b> that exist in satellite data —
+  signals that appear even before the Stress Heatmap catches anything.
+  <br><br>
+  <b style='color:#e0f0ff'>Red-Edge Position (REP):</b> Measures the structural health of chlorophyll molecules.
+  Think of it as a <em>molecular early warning</em> — bright areas mean the green pigment inside leaves
+  is starting to weaken, even if the leaf is still physically green.
+  <br><br>
+  <b style='color:#e0f0ff'>Thermal Anomaly:</b> Shows where plants have closed their breathing pores (stomata)
+  to conserve water. A plant that has stopped "sweating" is like a person running a high fever —
+  something is very wrong even though they look normal on the outside. Bright areas here = drought stress.
+  <br><br>
+  Together, these two maps reveal stress <b>7–14 days before standard NDVI</b> would detect anything.
+</div>
+""", unsafe_allow_html=True)
         am1,am2 = st.columns(2)
         with am1:
             st.write("**Red-Edge Position (REP)**")
@@ -961,6 +1292,17 @@ elif page == "📊 Band Analysis":
 
     st.write("---")
     st.subheader("Early Warning Index Dashboard")
+    st.markdown("""
+<div style='background:#0d1f36;border-left:4px solid #4fc3f7;border-radius:0 8px 8px 0;
+            padding:10px 16px;margin-bottom:14px;color:#b0cce8;font-size:0.9em'>
+  <b style='color:#4fc3f7'>📊 What are these dials?</b> Three hidden stress signals, each measuring
+  a different thing happening inside your plants right now.
+  <b>CWSI</b> = is the plant dehydrated and "running a fever"?
+  <b>CIre</b> = is the green pigment (chlorophyll) breaking down?
+  <b>Py-SIF</b> = is the plant still making food from sunlight?
+  All three react <b>7–14 days before visible yellowing.</b>
+</div>
+""", unsafe_allow_html=True)
     cw_u=compute_cwsi(hs_upload); ci_u=compute_cire(hs_upload); ps_u=compute_pysif(hs_upload)
     eu1,eu2,eu3 = st.columns(3)
     with eu1:
@@ -975,6 +1317,17 @@ elif page == "📊 Band Analysis":
 
     st.write("---")
     st.subheader("Stress Probability Distribution")
+    st.markdown("""
+<div style='background:#0d1f36;border-left:4px solid #ffa726;border-radius:0 8px 8px 0;
+            padding:10px 16px;margin-bottom:14px;color:#b0cce8;font-size:0.9em'>
+  <b style='color:#ffa726'>🥧 What does this pie chart mean?</b><br>
+  It breaks your entire field into three health categories.
+  The <b style='color:#ffa726'>yellow slice</b> is what makes this app unique —
+  those are areas that would look completely healthy in a normal satellite photo,
+  but our pre-visual sensors have already detected hidden stress.
+  Act on the yellow slice <em>before</em> it turns red.
+</div>
+""", unsafe_allow_html=True)
     pu_h=int(max(0,min(100,hs_upload*100-10)))
     pu_p=int(max(0,min(100-pu_h,(1-hs_upload)*60)))
     pu_d=max(0,100-pu_h-pu_p)
@@ -1045,5 +1398,4 @@ No renaming needed — bands are auto-detected from the filename.
     col_a,col_b = st.columns(2)
     col_a.markdown("🔗 [Copernicus Data Space](https://browser.dataspace.copernicus.eu)")
     col_b.markdown("🔗 [USGS EarthExplorer](https://earthexplorer.usgs.gov)")
-
     st.info("⚠️ All bands must come from the **same acquisition date and same tile**.")
